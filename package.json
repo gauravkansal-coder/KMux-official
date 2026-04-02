@@ -23,8 +23,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "esbuild",
-      "node-pty"
+      "esbuild"
     ]
   },
   "devDependencies": {
