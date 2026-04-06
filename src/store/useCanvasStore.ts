@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { CanvasState, Workspace, Terminal, Theme } from '../types/canvas-types';
+import type { CanvasState, Workspace, Terminal, Theme, WidthFraction } from '../types/canvas-types';
 
-export type { Workspace, Terminal };
+export type { Workspace, Terminal, WidthFraction };
 
-const WIDTH_CYCLE: Terminal['widthFraction'][] = ['1', '2/3', '1/2', '1/3'];
+const WIDTH_CYCLE: WidthFraction[] = ['1', '2/3', '1/2', '1/3'];
 
 const THEMES: Record<string, Theme> = {
   standard: {
@@ -228,11 +228,35 @@ export const useCanvasStore = create<CanvasState>()(
           const term = ws.terminals[ws.activeTerminalIndex];
           if (!term) return state;
 
-          const currentIdx = WIDTH_CYCLE.indexOf(term.widthFraction ?? '1');
+          const currentIdx = WIDTH_CYCLE.indexOf(term.widthFraction);
           const nextIdx =
             direction === 'shrink'
               ? Math.min(WIDTH_CYCLE.length - 1, currentIdx + 1)
               : Math.max(0, currentIdx - 1);
+
+          const updatedTerminals = [...ws.terminals];
+          updatedTerminals[ws.activeTerminalIndex] = {
+            ...term,
+            widthFraction: WIDTH_CYCLE[nextIdx],
+          };
+          const updatedWorkspaces = [...state.workspaces];
+          updatedWorkspaces[state.activeWorkspaceIndex] = {
+            ...ws,
+            terminals: updatedTerminals,
+          };
+          return { workspaces: updatedWorkspaces };
+        });
+      },
+
+      cycleWidth: () => {
+        set((state) => {
+          const ws = state.workspaces[state.activeWorkspaceIndex];
+          if (!ws) return state;
+          const term = ws.terminals[ws.activeTerminalIndex];
+          if (!term) return state;
+
+          const currentIdx = WIDTH_CYCLE.indexOf(term.widthFraction);
+          const nextIdx = (currentIdx + 1) % WIDTH_CYCLE.length;
 
           const updatedTerminals = [...ws.terminals];
           updatedTerminals[ws.activeTerminalIndex] = {
@@ -284,6 +308,7 @@ export const useCanvasStore = create<CanvasState>()(
     {
       name: 'kmux-storage',
       storage: createJSONStorage(() => localStorage),
+      version: 2, // 🛡️ Automatically nuke stale "Ghost Workspaces" for the whole team
     }
   )
 );
