@@ -78,6 +78,8 @@ export const WorkspaceRow: React.FC<Props> = ({ workspace, isActiveWorkspace }) 
     isActiveWorkspace && isTerminalFullscreen && activeTerminal
       ? [activeTerminal]
       : workspace.terminals;
+  const fullscreenTerminalIndex =
+    isActiveWorkspace && isTerminalFullscreen ? workspace.activeTerminalIndex : undefined;
 
   return (
     <div
@@ -121,14 +123,19 @@ export const WorkspaceRow: React.FC<Props> = ({ workspace, isActiveWorkspace }) 
               isActiveWorkspace && (isTerminalFullscreen || fitsOnScreen) ? 'center' : undefined,
           }}
         >
-          {visibleTerminals.map((term, index) => (
-            <TerminalPanel
-              key={term.id}
-              terminal={term}
-              terminalIndex={isActiveWorkspace && isTerminalFullscreen ? workspace.activeTerminalIndex : index}
-              isActive={isActiveWorkspace && term.id === activeTerminal?.id}
-            />
-          ))}
+          {visibleTerminals.map((term, index) => {
+            const terminalPanelIndex = fullscreenTerminalIndex ?? index;
+            const terminalIsActive = isActiveWorkspace && term.id === activeTerminal?.id;
+
+            return (
+              <TerminalPanel
+                key={term.id}
+                terminal={term}
+                terminalIndex={terminalPanelIndex}
+                isActive={terminalIsActive}
+              />
+            );
+          })}
         </div>
       )}
     </div>
