@@ -76,33 +76,34 @@ export const CanvasContainer: React.FC = () => {
         className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2"
         style={{ zIndex: Z_LAYERS.INDICATORS }}
       >
-        {workspaces.map((_, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-center rounded-lg transition-all duration-150 text-[9px] font-mono font-bold"
-            style={{
-              width: activeWorkspaceIndex === index ? "28px" : "20px",
-              height: activeWorkspaceIndex === index ? "28px" : "20px",
-              background:
-                activeWorkspaceIndex === index
+        {workspaces.map((workspace, index) => {
+          const isActive = activeWorkspaceIndex === index;
+          if (!isActive && workspace.terminals.length === 0) {
+            return null;
+          }
+
+          return (
+            <div
+              key={workspace.id}
+              className="flex items-center justify-center rounded-lg transition-all duration-150 text-[9px] font-mono font-bold"
+              style={{
+                width: isActive ? "28px" : "20px",
+                height: isActive ? "28px" : "20px",
+                background: isActive
                   ? `${theme.accent}15`
                   : "rgba(255,255,255,0.02)",
-              border: `1px solid ${activeWorkspaceIndex === index ? `${theme.accent}88` : theme.border}`,
-              color:
-                activeWorkspaceIndex === index ? theme.accent : theme.textDim,
-              opacity: activeWorkspaceIndex === index ? 1 : 0.4,
-              boxShadow:
-                activeWorkspaceIndex === index
-                  ? `0 4px 12px ${theme.accent}22`
-                  : "none",
-              transform:
-                activeWorkspaceIndex === index ? "scale(1.1)" : "scale(1)",
-              marginLeft: activeWorkspaceIndex === index ? "-4px" : "0",
-            }}
-          >
-            {index + 1}
-          </div>
-        ))}
+                border: `1px solid ${isActive ? `${theme.accent}88` : theme.border}`,
+                color: isActive ? theme.accent : theme.textDim,
+                opacity: isActive ? 1 : 0.4,
+                boxShadow: isActive ? `0 4px 12px ${theme.accent}22` : "none",
+                transform: isActive ? "scale(1.1)" : "scale(1)",
+                marginLeft: isActive ? "-4px" : "0",
+              }}
+            >
+              {index + 1}
+            </div>
+          );
+        })}
       </div>
 
       <div
