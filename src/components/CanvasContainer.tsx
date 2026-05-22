@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useCanvasStore } from "../store/useCanvasStore";
 import { WorkspaceRow } from "./WorkspaceRow";
 import { FuzzyFinder } from "./FuzzyFinder";
@@ -16,6 +16,16 @@ export const CanvasContainer: React.FC = () => {
     useCanvasStore();
 
   const [controlsVisible, setControlsVisible] = useState(true);
+  const previousWorkspaceIndexRef = useRef(activeWorkspaceIndex);
+  const workspaceDistance = Math.abs(
+    activeWorkspaceIndex - previousWorkspaceIndexRef.current,
+  );
+  const workspaceTransitionDuration =
+    workspaceDistance === 0 ? 0 : Math.min(340, 220 + workspaceDistance * 30);
+  const workspaceTransition =
+    workspaceDistance === 0
+      ? "none"
+      : `transform ${workspaceTransitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1)`;
 
   useEffect(() => {
     let id: number;
@@ -34,6 +44,10 @@ export const CanvasContainer: React.FC = () => {
       window.removeEventListener("mousemove", poke, true);
     };
   }, []);
+
+  useEffect(() => {
+    previousWorkspaceIndexRef.current = activeWorkspaceIndex;
+  }, [activeWorkspaceIndex]);
 
   const translateY = -(activeWorkspaceIndex * SCREEN_HEIGHT_VH);
 
@@ -54,10 +68,11 @@ export const CanvasContainer: React.FC = () => {
         }}
       >
         <div
-          className="w-full h-full transition-transform"
+          className="w-full h-full"
           style={{
-            transition: `transform ${TRANSITION_CANVAS}`,
-            transform: `translateY(${translateY}vh)`,
+            transition: workspaceTransition,
+            transform: `translate3d(0, ${translateY}vh, 0)`,
+            willChange: "transform",
           }}
         >
           {workspaces.map((ws) => (

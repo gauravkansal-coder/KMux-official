@@ -85,6 +85,8 @@ export const WorkspaceRow: React.FC<Props> = ({
     isActiveWorkspace && isTerminalFullscreen && activeTerminal
       ? [activeTerminal]
       : workspace.terminals;
+  const shouldCenterTerminals =
+    fitsOnScreen || (isActiveWorkspace && isTerminalFullscreen);
 
   return (
     <div
@@ -135,18 +137,11 @@ export const WorkspaceRow: React.FC<Props> = ({
         <div
           className="flex transition-transform duration-[180ms] ease-[cubic-bezier(0.25,1,0.5,1)]"
           style={{
-            transform:
-              isActiveWorkspace && (isTerminalFullscreen || fitsOnScreen)
-                ? "translateX(0)"
-                : `translateX(${-viewOffset}vw)`,
-            width:
-              isActiveWorkspace && (isTerminalFullscreen || fitsOnScreen)
-                ? "100%"
-                : undefined,
-            justifyContent:
-              isActiveWorkspace && (isTerminalFullscreen || fitsOnScreen)
-                ? "center"
-                : undefined,
+            transform: shouldCenterTerminals
+              ? "translateX(0)"
+              : `translateX(${-viewOffset}vw)`,
+            width: shouldCenterTerminals ? "100%" : undefined,
+            justifyContent: shouldCenterTerminals ? "center" : undefined,
           }}
         >
           {visibleTerminals.map((term) => {

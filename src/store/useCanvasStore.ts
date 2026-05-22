@@ -154,14 +154,8 @@ export const useCanvasStore = create<CanvasState>()(
             direction === 'up'
               ? Math.max(0, state.activeWorkspaceIndex - 1)
               : Math.min(state.workspaces.length - 1, state.activeWorkspaceIndex + 1);
-          const navigationState = pruneEmptyWorkspaceOnLeave(
-            state.workspaces,
-            state.activeWorkspaceIndex,
-            newIndex,
-          );
           return {
-            workspaces: navigationState.workspaces,
-            activeWorkspaceIndex: navigationState.activeWorkspaceIndex,
+            activeWorkspaceIndex: newIndex,
             isTerminalFullscreen: false,
           };
         });
@@ -209,7 +203,7 @@ export const useCanvasStore = create<CanvasState>()(
           const newTerminal: Terminal = {
             id: createId(),
             title: `Terminal ${ws.terminals.length + 1}`,
-            widthFraction: '1',
+            widthFraction: '2/3',
             profileId,
           };
           const updatedWorkspace: Workspace = {
