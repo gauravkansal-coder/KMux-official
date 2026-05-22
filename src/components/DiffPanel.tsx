@@ -17,6 +17,8 @@ type DiffPanelState =
   | { status: 'empty' }
   | { status: 'error'; message: string };
 
+type DiffViewMode = 'split' | 'stacked';
+
 const diffCache = new Map<string, { patch: string; items: CodeViewItem[] }>();
 const RESIZE_PLACEHOLDER_MS = 180;
 
@@ -31,17 +33,25 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
   );
   const [refreshKey, setRefreshKey] = useState(0);
   const [isResizing, setIsResizing] = useState(false);
+  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('split');
   const lastRefresh = useRef(0);
+  const wasActive = useRef(isActive);
   const previousWidthFraction = useRef(panel.widthFraction);
   const resizeTimer = useRef<number | null>(null);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback((force = false) => {
     const now = Date.now();
-    if (now - lastRefresh.current < 500) return;
+    if (!force && now - lastRefresh.current < 500) return;
     lastRefresh.current = now;
-    diffCache.delete(panel.cwd);
     setRefreshKey((key) => key + 1);
-  }, [panel.cwd]);
+  }, []);
+
+  useEffect(() => {
+    if (!wasActive.current && isActive) {
+      refresh(true);
+    }
+    wasActive.current = isActive;
+  }, [isActive, refresh]);
 
   useEffect(() => {
     if (previousWidthFraction.current === panel.widthFraction) {
@@ -82,11 +92,13 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
         if (cancelled) return;
 
         if (!response.ok) {
+          diffCache.delete(panel.cwd);
           setPanelState({ status: 'error', message: response.message });
           return;
         }
 
         if (response.patch.trim().length === 0) {
+          diffCache.delete(panel.cwd);
           setPanelState({ status: 'empty' });
           return;
         }
@@ -151,57 +163,7 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
         position: 'relative',
       }}
     >
-      <header
-        className="flex items-center justify-between gap-3 px-3 py-2 border-b"
-        style={{ borderColor: theme.border }}
-      >
-        <div className="min-w-0">
-          <div
-            className="truncate uppercase"
-            style={{
-              color: isActive ? theme.accent : theme.textDim,
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '10px',
-              letterSpacing: '0.16em',
-              fontWeight: 700,
-            }}
-          >
-            {panel.title}
-          </div>
-          <div
-            className="truncate"
-            title={panel.cwd}
-            style={{
-              color: theme.textDim,
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '10px',
-              marginTop: '3px',
-            }}
-          >
-            {panel.cwd}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            refresh();
-          }}
-          className="px-2 py-1 border uppercase"
-          style={{
-            borderColor: theme.border,
-            color: theme.textDim,
-            background: 'transparent',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '10px',
-            letterSpacing: '0.12em',
-          }}
-        >
-          refresh
-        </button>
-      </header>
-
-      <div className="flex-1 min-h-0 overflow-auto px-3 py-2">
+      <div className="diff-panel-scroll flex-1 min-h-0 overflow-auto px-3 py-3">
         {panelState.status === 'loading' ? (
           <DiffPanelMessage label="loading diff" color={theme.textDim} />
         ) : panelState.status === 'error' ? (
@@ -210,6 +172,14 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
           <DiffPanelMessage label="no changes against HEAD" color={theme.textDim} />
         ) : (
           <div className="relative min-h-full">
+            <DiffViewModeControl
+              mode={diffViewMode}
+              onModeChange={setDiffViewMode}
+              accent={theme.accent}
+              border={theme.border}
+              panelBg={theme.panelBg}
+              textDim={theme.textDim}
+            />
             {shouldShowResizePlaceholder ? (
               <div className="absolute inset-0 z-10">
                 <DiffPanelMessage label="resizing diff" color={theme.textDim} />
@@ -227,7 +197,7 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
                 items={panelState.items}
                 options={{
                   theme: 'pierre-dark',
-                  diffStyle: 'split',
+                  diffStyle: diffViewMode === 'split' ? 'split' : 'unified',
                   disableBackground: true,
                   lineDiffType: 'word',
                 }}
@@ -241,6 +211,58 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
         )}
       </div>
     </section>
+  );
+};
+
+interface DiffViewModeControlProps {
+  mode: DiffViewMode;
+  onModeChange: (mode: DiffViewMode) => void;
+  accent: string;
+  border: string;
+  panelBg: string;
+  textDim: string;
+}
+
+const DiffViewModeControl: React.FC<DiffViewModeControlProps> = ({
+  mode,
+  onModeChange,
+  accent,
+  border,
+  panelBg,
+  textDim,
+}) => {
+  return (
+    <div
+      className="absolute right-2 top-2 z-20 flex overflow-hidden border"
+      style={{
+        background: panelBg,
+        borderColor: border,
+        fontFamily: 'JetBrains Mono, monospace',
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      {(['split', 'stacked'] as const).map((viewMode) => {
+        const isSelected = mode === viewMode;
+
+        return (
+          <button
+            key={viewMode}
+            type="button"
+            onClick={() => onModeChange(viewMode)}
+            className="px-2 py-1 uppercase"
+            style={{
+              background: isSelected ? accent : 'transparent',
+              border: 0,
+              color: isSelected ? '#050302' : textDim,
+              fontSize: '10px',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {viewMode}
+          </button>
+        );
+      })}
+    </div>
   );
 };
 

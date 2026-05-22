@@ -32,6 +32,15 @@ body {
   height: 0;
 }
 
+.diff-panel-scroll {
+  scrollbar-width: none;
+}
+
+.diff-panel-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .terminal-viewport-shell.is-scrolling .xterm-viewport {
   scrollbar-width: thin;
 }
