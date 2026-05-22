@@ -15,7 +15,7 @@ export const WorkspaceRow: React.FC<Props> = ({
   isActiveWorkspace,
 }) => {
   const [viewOffset, setViewOffset] = useState(0);
-  const { theme, isTerminalFullscreen } = useCanvasStore();
+  const { theme, isOverview, isTerminalFullscreen } = useCanvasStore();
   const totalRowWidth = workspace.terminals.reduce(
     (total, terminal) => total + getWidthVW(terminal.widthFraction) + GAPS_VW,
     0,
@@ -91,7 +91,7 @@ export const WorkspaceRow: React.FC<Props> = ({
   return (
     <div
       className={`w-screen h-screen flex-shrink-0 flex items-center transition-opacity duration-150 ${
-        isActiveWorkspace ? "opacity-100" : "opacity-40"
+        isActiveWorkspace || isOverview ? "opacity-100" : "opacity-40"
       }`}
     >
       {workspace.terminals.length === 0 ? (
