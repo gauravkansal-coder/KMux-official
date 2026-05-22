@@ -112,16 +112,18 @@ export const useCanvasStore = create<CanvasState>()(
 
       jumpToWorkspace: (index: number) => {
         set((state) => {
-          const targetIndex = Math.max(0, Math.min(index, state.workspaces.length - 1));
-          const navigationState = pruneEmptyWorkspaceOnLeave(
-            state.workspaces,
-            state.activeWorkspaceIndex,
-            targetIndex,
-          );
+          if (index < 0 || index >= MAX_WORKSPACES) {
+            return state;
+          }
+
+          const workspaces = [...state.workspaces];
+          while (workspaces.length <= index) {
+            workspaces.push(createWorkspace(workspaces));
+          }
 
           return {
-            workspaces: navigationState.workspaces,
-            activeWorkspaceIndex: navigationState.activeWorkspaceIndex,
+            workspaces,
+            activeWorkspaceIndex: index,
             isSearchOpen: false,
             isTerminalFullscreen: false,
           };

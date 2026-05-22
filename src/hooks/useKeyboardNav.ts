@@ -6,7 +6,6 @@ export const useKeyboardNav = () => {
   const {
     moveTerminal,
     moveWorkspace,
-    jumpToTerminal,
     jumpToWorkspace,
     addTerminal,
     addWorkspace,
@@ -40,8 +39,8 @@ export const useKeyboardNav = () => {
         } else if (e.altKey && key === 'b') {
           toggleTerminalFullscreen();
           handled = true;
-        } else if (/^[0-9]$/.test(key)) {
-          jumpToWorkspace(key === '0' ? 9 : parseInt(key, 10) - 1);
+        } else if (e.altKey && /^[1-9]$/.test(key)) {
+          jumpToWorkspace(parseInt(key, 10) - 1);
           handled = true;
         } else {
           switch (key) {
@@ -123,7 +122,6 @@ export const useKeyboardNav = () => {
   }, [
     moveTerminal,
     moveWorkspace,
-    jumpToTerminal,
     jumpToWorkspace,
     addTerminal,
     addWorkspace,

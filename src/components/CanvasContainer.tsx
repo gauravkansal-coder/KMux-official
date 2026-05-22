@@ -135,6 +135,7 @@ export const CanvasContainer: React.FC = () => {
             modifiers: alt or super
           </div>
           <p>arrows - focus terminal / workspace</p>
+          <p>1-9 - jump to workspace</p>
           <p>enter - new terminal</p>
           <p>n - new workspace</p>
           <p>shift + alt + enter - choose terminal profile</p>
