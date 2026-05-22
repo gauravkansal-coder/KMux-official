@@ -104,7 +104,7 @@ export const KEYBIND_SECTIONS: KeyBindSection[] = [
   {
     title: 'Navigation',
     bindings: [
-      { label: 'Focus terminal', shortcut: 'Alt + ← →' },
+      { label: 'Focus terminal', shortcut: 'Alt + H/L' },
       { label: 'Switch workspace', shortcut: 'Alt + J/K' },
       { label: 'Jump to workspace', shortcut: 'Alt + 1-9' },
     ],
