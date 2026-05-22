@@ -54,16 +54,6 @@ function ensureKeyframes() {
         transform: translateX(0);
       }
     }
-    .controls-overlay-close {
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.4);
-      border-color: rgba(255,255,255,0.08);
-    }
-    .controls-overlay-close:hover {
-      background: rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.6);
-      border-color: rgba(255,255,255,0.15);
-    }
   `;
   document.head.appendChild(style);
 }
@@ -170,6 +160,7 @@ export const ControlsOverlay: React.FC = () => {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [animateRows, setAnimateRows] = useState(false);
+  const [isCloseHovered, setIsCloseHovered] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -263,8 +254,9 @@ export const ControlsOverlay: React.FC = () => {
         aria-labelledby={OVERLAY_TITLE_ID}
         tabIndex={-1}
         style={{
-          background: `linear-gradient(180deg, rgba(16, 12, 10, 0.98) 0%, rgba(8, 6, 5, 0.99) 100%)`,
+          background: theme.panelBg,
           border: `1px solid ${theme.border}`,
+          outline: "none",
           borderRadius: "12px",
           width: "100%",
           maxWidth: "520px",
@@ -273,7 +265,7 @@ export const ControlsOverlay: React.FC = () => {
           flexDirection: "column" as const,
           gap: "20px",
           fontFamily: FONT,
-          boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.02)`,
+          boxShadow: `0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px ${theme.border}`,
           animation: `controls-panel-${animState} ${ANIM_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1) both`,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -302,20 +294,23 @@ export const ControlsOverlay: React.FC = () => {
             KMUX CONTROLS
           </span>
           <button
-            className="controls-overlay-close"
             onClick={toggleControls}
             aria-label="Close controls"
             style={{
+              background: isCloseHovered ? `${theme.accent}18` : "transparent",
+              color: isCloseHovered ? theme.text : theme.textDim,
               fontSize: "10px",
               fontWeight: 500,
               fontFamily: FONT,
               padding: "4px 8px",
               borderRadius: "4px",
-              border: "1px solid",
+              border: `1px solid ${isCloseHovered ? `${theme.accent}66` : theme.border}`,
               cursor: "pointer",
               lineHeight: 1,
               transition: "all 150ms ease",
             }}
+            onMouseEnter={() => setIsCloseHovered(true)}
+            onMouseLeave={() => setIsCloseHovered(false)}
           >
             ESC
           </button>
