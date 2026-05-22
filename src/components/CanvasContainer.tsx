@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useCanvasStore } from "../store/useCanvasStore";
 import { WorkspaceRow } from "./WorkspaceRow";
 import { FuzzyFinder } from "./FuzzyFinder";
+import { ControlsOverlay } from "./ControlsOverlay";
 import {
   OVERVIEW_SCALE,
   SCREEN_HEIGHT_VH,
@@ -121,49 +122,7 @@ export const CanvasContainer: React.FC = () => {
         })}
       </div>
 
-      <div
-        className="absolute top-5 right-5 transition-opacity"
-        style={{
-          zIndex: Z_LAYERS.CONTROLS,
-          transition: `opacity ${TRANSITION_UI}`,
-          opacity: controlsVisible ? 1 : 0,
-          pointerEvents: controlsVisible ? "auto" : "none",
-        }}
-      >
-        <div
-          className="px-6 py-5 rounded-2xl border backdrop-blur-3xl shadow-3xl text-[10px] tracking-[0.18em] uppercase flex flex-col gap-3"
-          style={{
-            background: theme.panelBg,
-            borderColor: theme.border,
-            color: theme.textDim,
-          }}
-        >
-          <div
-            className="border-b pb-2 mb-1 flex justify-between"
-            style={{ borderColor: theme.border }}
-          >
-            <span style={{ color: theme.accent, fontWeight: 700 }}>
-              KMux Controls
-            </span>
-            <span>Theme: {theme.name}</span>
-          </div>
-          <div className="opacity-40 italic mb-1 text-[9px]">
-            modifiers: alt or super
-          </div>
-          <p>arrows - focus terminal / workspace</p>
-          <p>1-9 - jump to workspace</p>
-          <p>enter - new terminal</p>
-          <p>n - new workspace</p>
-          <p>shift + alt + enter - choose terminal profile</p>
-          <p>shift + alt + n - choose workspace profile</p>
-          <p>q/w - close terminal</p>
-          <p>o - toggle overview</p>
-          <p>f - fuzzy finder</p>
-          <p>-/= - resize width</p>
-          <p>ctrl +/- - focused font size</p>
-          <p>ctrl + shift +/- - global font size</p>
-        </div>
-      </div>
+      <ControlsOverlay />
 
       <div
         className="absolute bottom-5 left-1/2 -translate-x-1/2 transition-opacity"

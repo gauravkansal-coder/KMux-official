@@ -47,6 +47,7 @@ export interface CanvasState {
   isOverview: boolean;
   isSearchOpen: boolean;
   isTerminalFullscreen: boolean;
+  isControlsOpen: boolean;
   terminalFontSize: number;
   terminalFontSizes: Record<string, number>;
   theme: Theme;
@@ -54,6 +55,7 @@ export interface CanvasState {
   setTheme: (themeName: string) => void;
   cycleThemes: () => void;
   toggleSearch: () => void;
+  toggleControls: () => void;
   jumpToGlobalTerminal: (terminalId: string) => void;
   jumpToWorkspace: (index: number) => void;
   moveWorkspace: (direction: 'up' | 'down') => void;

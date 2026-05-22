@@ -83,6 +83,7 @@ export const useCanvasStore = create<CanvasState>()(
       isOverview: false,
       isSearchOpen: false,
       isTerminalFullscreen: false,
+      isControlsOpen: false,
       terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
       terminalFontSizes: {},
       theme: THEMES.standard,
@@ -94,6 +95,10 @@ export const useCanvasStore = create<CanvasState>()(
 
       toggleSearch: () => {
         set((state) => ({ isSearchOpen: !state.isSearchOpen }));
+      },
+
+      toggleControls: () => {
+        set((state) => ({ isControlsOpen: !state.isControlsOpen }));
       },
 
       jumpToGlobalTerminal: (terminalId: string) => {
