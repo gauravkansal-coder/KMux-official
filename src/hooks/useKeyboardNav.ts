@@ -11,6 +11,8 @@ export const useKeyboardNav = () => {
     addWorkspace,
     removeTerminal,
     resizeTerminal,
+    adjustActiveTerminalFontSize,
+    adjustGlobalTerminalFontSize,
     cycleWidth,
     toggleOverview,
     toggleTerminalFullscreen,
@@ -23,6 +25,33 @@ export const useKeyboardNav = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isPickerOpen) {
         return;
+      }
+
+      if (e.ctrlKey && !e.metaKey && !e.altKey) {
+        const key = e.key.toLowerCase();
+        let handled = false;
+
+        if (key === '+' || key === '=') {
+          if (e.shiftKey) {
+            adjustGlobalTerminalFontSize('increase');
+          } else {
+            adjustActiveTerminalFontSize('increase');
+          }
+          handled = true;
+        } else if (key === '-' || key === '_') {
+          if (e.shiftKey) {
+            adjustGlobalTerminalFontSize('decrease');
+          } else {
+            adjustActiveTerminalFontSize('decrease');
+          }
+          handled = true;
+        }
+
+        if (handled) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
       }
 
       // Intercept Meta (Cmd/Win) or Alt keys
@@ -127,6 +156,8 @@ export const useKeyboardNav = () => {
     addWorkspace,
     removeTerminal,
     resizeTerminal,
+    adjustActiveTerminalFontSize,
+    adjustGlobalTerminalFontSize,
     cycleWidth,
     toggleOverview,
     toggleTerminalFullscreen,

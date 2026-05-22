@@ -160,6 +160,8 @@ export const CanvasContainer: React.FC = () => {
           <p>o - toggle overview</p>
           <p>f - fuzzy finder</p>
           <p>-/= - resize width</p>
+          <p>ctrl +/- - focused font size</p>
+          <p>ctrl + shift +/- - global font size</p>
         </div>
       </div>
 

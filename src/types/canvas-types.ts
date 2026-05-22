@@ -47,6 +47,8 @@ export interface CanvasState {
   isOverview: boolean;
   isSearchOpen: boolean;
   isTerminalFullscreen: boolean;
+  terminalFontSize: number;
+  terminalFontSizes: Record<string, number>;
   theme: Theme;
 
   setTheme: (themeName: string) => void;
@@ -61,6 +63,8 @@ export interface CanvasState {
   addWorkspace: (profileId?: TerminalProfileId) => void;
   removeTerminal: () => void;
   resizeTerminal: (direction: 'shrink' | 'expand') => void;
+  adjustActiveTerminalFontSize: (direction: 'decrease' | 'increase') => void;
+  adjustGlobalTerminalFontSize: (direction: 'decrease' | 'increase') => void;
   cycleWidth: () => void;
   toggleOverview: () => void;
   toggleTerminalFullscreen: () => void;

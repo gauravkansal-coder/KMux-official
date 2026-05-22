@@ -42,6 +42,10 @@ export const Z_LAYERS = {
  */
 export const SEARCH_BOX_WIDTH = "640px";
 export const SEARCH_BOX_TOP = "15vh";
+export const DEFAULT_TERMINAL_FONT_SIZE = 12;
+export const MIN_TERMINAL_FONT_SIZE = 9;
+export const MAX_TERMINAL_FONT_SIZE = 24;
+export const TERMINAL_FONT_SIZE_STEP = 1;
 
 /**
  * Standard Keyboard Cycle Fractions

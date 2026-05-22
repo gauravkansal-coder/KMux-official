@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Terminal as XtermTerminal } from '@xterm/xterm';
+import type { FitAddon } from '@xterm/addon-fit';
 import { useCanvasStore } from '../../../store/useCanvasStore';
 import type { TerminalSessionSnapshot } from '../../shared/terminal-types';
 import { useTerminalRuntime } from '../context/useTerminalRuntime';
-import { observeTerminalSize } from '../utils/terminalSizing';
+import { fitTerminal, observeTerminalSize } from '../utils/terminalSizing';
 import { createXterm } from '../xterm/createXterm';
 import { toXtermTheme } from '../xterm/terminalTheme';
 
@@ -22,9 +23,14 @@ const getStatusLabel = (session: TerminalSessionSnapshot | undefined): string =>
 
 export const TerminalViewport: React.FC<Props> = ({ terminalId, isActive }) => {
   const theme = useCanvasStore((state) => state.theme);
+  const terminalFontSize = useCanvasStore(
+    (state) => state.terminalFontSizes[terminalId] ?? state.terminalFontSize,
+  );
   const { sessions, registerOutputSink, writeTerminal, resizeTerminal } = useTerminalRuntime();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XtermTerminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const initialTerminalFontSizeRef = useRef(terminalFontSize);
   const bootstrappedRef = useRef(false);
   const hideScrollbarTimerRef = useRef<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -37,8 +43,12 @@ export const TerminalViewport: React.FC<Props> = ({ terminalId, isActive }) => {
       return undefined;
     }
 
-    const { terminal, fitAddon } = createXterm(toXtermTheme(theme));
+    const { terminal, fitAddon } = createXterm(
+      toXtermTheme(theme),
+      initialTerminalFontSizeRef.current,
+    );
     xtermRef.current = terminal;
+    fitAddonRef.current = fitAddon;
     terminal.open(container);
     const viewport = container.querySelector('.xterm-viewport');
 
@@ -88,6 +98,7 @@ export const TerminalViewport: React.FC<Props> = ({ terminalId, isActive }) => {
       detachOutput();
       terminal.dispose();
       xtermRef.current = null;
+      fitAddonRef.current = null;
     };
   }, [registerOutputSink, resizeTerminal, terminalId, writeTerminal]);
 
@@ -97,6 +108,26 @@ export const TerminalViewport: React.FC<Props> = ({ terminalId, isActive }) => {
     }
     xtermRef.current.options.theme = toXtermTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const terminal = xtermRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (!terminal || !fitAddon) {
+      return;
+    }
+
+    terminal.options.fontSize = terminalFontSize;
+    const frameId = window.requestAnimationFrame(() => {
+      const { cols, rows } = fitTerminal(terminal, fitAddon);
+      void resizeTerminal(terminalId, cols, rows).catch((error) => {
+        console.error(`Failed to resize terminal "${terminalId}" after font size change.`, error);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [resizeTerminal, terminalFontSize, terminalId]);
 
   useEffect(() => {
     if (isActive) {

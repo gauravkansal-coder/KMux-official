@@ -7,13 +7,13 @@ export interface XtermInstance {
   fitAddon: FitAddon;
 }
 
-export const createXterm = (theme: ITheme): XtermInstance => {
+export const createXterm = (theme: ITheme, fontSize: number): XtermInstance => {
   const terminal = new Terminal({
     allowTransparency: true,
     convertEol: true,
     cursorBlink: true,
     fontFamily: 'JetBrains Mono, IBM Plex Mono, monospace',
-    fontSize: 12,
+    fontSize,
     lineHeight: 1.25,
     scrollback: 5000,
     theme,

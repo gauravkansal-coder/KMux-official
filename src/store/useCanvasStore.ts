@@ -2,12 +2,32 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { TerminalProfileId } from '../terminal/shared/terminal-profiles';
 import type { CanvasState, Workspace, Terminal, WidthFraction } from '../types/canvas-types';
-import { THEMES, WIDTH_CYCLE } from '../lib/constants';
+import {
+  DEFAULT_TERMINAL_FONT_SIZE,
+  MAX_TERMINAL_FONT_SIZE,
+  MIN_TERMINAL_FONT_SIZE,
+  TERMINAL_FONT_SIZE_STEP,
+  THEMES,
+  WIDTH_CYCLE,
+} from '../lib/constants';
 
 export type { Workspace, Terminal, WidthFraction };
 
 const createId = (): string => crypto.randomUUID();
 const MAX_WORKSPACES = 10;
+
+const getFontSizeDelta = (direction: 'decrease' | 'increase'): number => {
+  return direction === 'increase' ? TERMINAL_FONT_SIZE_STEP : -TERMINAL_FONT_SIZE_STEP;
+};
+
+const clampTerminalFontSize = (value: number): number => {
+  return Math.min(MAX_TERMINAL_FONT_SIZE, Math.max(MIN_TERMINAL_FONT_SIZE, value));
+};
+
+const getActiveTerminal = (state: CanvasState): Terminal | undefined => {
+  const workspace = state.workspaces[state.activeWorkspaceIndex];
+  return workspace?.terminals[workspace.activeTerminalIndex];
+};
 
 const createWorkspaceTitle = (workspaces: Workspace[]): string => {
   return `Workspace ${workspaces.length + 1}`;
@@ -63,6 +83,8 @@ export const useCanvasStore = create<CanvasState>()(
       isOverview: false,
       isSearchOpen: false,
       isTerminalFullscreen: false,
+      terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
+      terminalFontSizes: {},
       theme: THEMES.standard,
 
       setTheme: (themeName: string) => {
@@ -226,6 +248,7 @@ export const useCanvasStore = create<CanvasState>()(
           const currentWs = { ...ws, terminals: [...ws.terminals] };
 
           currentWs.terminals.splice(currentWs.activeTerminalIndex, 1);
+          const removedTerminal = ws.terminals[ws.activeTerminalIndex];
 
           if (currentWs.activeTerminalIndex >= currentWs.terminals.length) {
             currentWs.activeTerminalIndex = Math.max(0, currentWs.terminals.length - 1);
@@ -242,13 +265,26 @@ export const useCanvasStore = create<CanvasState>()(
             // Final Re-index to ensure Workspace titles always match their visual order
             return {
               workspaces: reindexWorkspaces(newWorkspaces),
+              terminalFontSizes: Object.fromEntries(
+                Object.entries(state.terminalFontSizes).filter(
+                  ([terminalId]) => terminalId !== removedTerminal?.id,
+                ),
+              ),
               activeWorkspaceIndex: newWSIndex,
               isTerminalFullscreen: false,
             };
           }
 
           newWorkspaces[state.activeWorkspaceIndex] = currentWs;
-          return { workspaces: newWorkspaces, isTerminalFullscreen: false };
+          return {
+            workspaces: newWorkspaces,
+            terminalFontSizes: Object.fromEntries(
+              Object.entries(state.terminalFontSizes).filter(
+                ([terminalId]) => terminalId !== removedTerminal?.id,
+              ),
+            ),
+            isTerminalFullscreen: false,
+          };
         });
       },
 
@@ -300,6 +336,42 @@ export const useCanvasStore = create<CanvasState>()(
             terminals: updatedTerminals,
           };
           return { workspaces: updatedWorkspaces };
+        });
+      },
+
+      adjustActiveTerminalFontSize: (direction) => {
+        set((state) => {
+          const activeTerminal = getActiveTerminal(state);
+          if (!activeTerminal) {
+            return state;
+          }
+
+          const currentFontSize =
+            state.terminalFontSizes[activeTerminal.id] ?? state.terminalFontSize;
+          return {
+            terminalFontSizes: {
+              ...state.terminalFontSizes,
+              [activeTerminal.id]: clampTerminalFontSize(
+                currentFontSize + getFontSizeDelta(direction),
+              ),
+            },
+          };
+        });
+      },
+
+      adjustGlobalTerminalFontSize: (direction) => {
+        set((state) => {
+          const delta = getFontSizeDelta(direction);
+          const terminalFontSizes = Object.fromEntries(
+            Object.entries(state.terminalFontSizes).map(([terminalId, fontSize]) => [
+              terminalId,
+              clampTerminalFontSize(fontSize + delta),
+            ]),
+          );
+          return {
+            terminalFontSize: clampTerminalFontSize(state.terminalFontSize + delta),
+            terminalFontSizes,
+          };
         });
       },
 
