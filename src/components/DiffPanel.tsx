@@ -1,6 +1,6 @@
 import { parsePatchFiles } from '@pierre/diffs';
 import { CodeView, type CodeViewItem } from '@pierre/diffs/react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useCanvasStore } from '../store/useCanvasStore';
 import type { DiffPanel as DiffPanelItem } from '../types/canvas-types';
 import { GAPS_VW } from '../lib/constants';
@@ -17,25 +17,69 @@ type DiffPanelState =
   | { status: 'empty' }
   | { status: 'error'; message: string };
 
+const diffCache = new Map<string, { patch: string; items: CodeViewItem[] }>();
+const RESIZE_PLACEHOLDER_MS = 180;
+
 export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
-  const { theme, isTerminalFullscreen, focusWorkspaceItem } = useCanvasStore();
-  const [panelState, setPanelState] = useState<DiffPanelState>({ status: 'loading' });
+  const theme = useCanvasStore((state) => state.theme);
+  const isTerminalFullscreen = useCanvasStore((state) => state.isTerminalFullscreen);
+  const focusWorkspaceItem = useCanvasStore((state) => state.focusWorkspaceItem);
+
+  const cached = diffCache.get(panel.cwd);
+  const [panelState, setPanelState] = useState<DiffPanelState>(
+    cached ? { status: 'ready', items: cached.items } : { status: 'loading' },
+  );
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isResizing, setIsResizing] = useState(false);
+  const lastRefresh = useRef(0);
+  const previousWidthFraction = useRef(panel.widthFraction);
+  const resizeTimer = useRef<number | null>(null);
 
   const refresh = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefresh.current < 500) return;
+    lastRefresh.current = now;
+    diffCache.delete(panel.cwd);
     setRefreshKey((key) => key + 1);
+  }, [panel.cwd]);
+
+  useEffect(() => {
+    if (previousWidthFraction.current === panel.widthFraction) {
+      return;
+    }
+
+    previousWidthFraction.current = panel.widthFraction;
+    setIsResizing(true);
+
+    if (resizeTimer.current !== null) {
+      window.clearTimeout(resizeTimer.current);
+    }
+
+    resizeTimer.current = window.setTimeout(() => {
+      setIsResizing(false);
+      resizeTimer.current = null;
+    }, RESIZE_PLACEHOLDER_MS);
+  }, [panel.widthFraction]);
+
+  useEffect(() => {
+    return () => {
+      if (resizeTimer.current !== null) {
+        window.clearTimeout(resizeTimer.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setPanelState({ status: 'loading' });
+
+    if (!diffCache.has(panel.cwd)) {
+      setPanelState({ status: 'loading' });
+    }
 
     void window.diffApi
       .getGitWorkingTreeDiff({ cwd: panel.cwd })
       .then((response) => {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         if (!response.ok) {
           setPanelState({ status: 'error', message: response.message });
@@ -55,7 +99,9 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
               fileDiff,
             })),
           );
-          setPanelState(items.length > 0 ? { status: 'ready', items } : { status: 'empty' });
+          const nextState = items.length > 0 ? { status: 'ready' as const, items } : { status: 'empty' as const };
+          diffCache.set(panel.cwd, { patch: response.patch, items });
+          setPanelState(nextState);
         } catch (error) {
           setPanelState({
             status: 'error',
@@ -64,9 +110,7 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
         }
       })
       .catch((error: unknown) => {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         setPanelState({
           status: 'error',
           message: error instanceof Error ? error.message : String(error),
@@ -77,6 +121,10 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
       cancelled = true;
     };
   }, [panel.cwd, refreshKey]);
+
+  const widthFractionChanged = previousWidthFraction.current !== panel.widthFraction;
+  const shouldShowResizePlaceholder =
+    panelState.status === 'ready' && (isResizing || widthFractionChanged);
 
   const width =
     isTerminalFullscreen && isActive ? '96vw' : getWidthVWString(panel.widthFraction);
@@ -161,20 +209,35 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
         ) : panelState.status === 'empty' ? (
           <DiffPanelMessage label="no changes against HEAD" color={theme.textDim} />
         ) : (
-          <CodeView
-            items={panelState.items}
-            disableWorkerPool
-            options={{
-              theme: 'pierre-dark',
-              diffStyle: 'split',
-              disableBackground: true,
-              lineDiffType: 'word',
-            }}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '12px',
-            }}
-          />
+          <div className="relative min-h-full">
+            {shouldShowResizePlaceholder ? (
+              <div className="absolute inset-0 z-10">
+                <DiffPanelMessage label="resizing diff" color={theme.textDim} />
+              </div>
+            ) : null}
+            <div
+              aria-hidden={shouldShowResizePlaceholder}
+              style={{
+                contentVisibility: shouldShowResizePlaceholder ? 'hidden' : 'visible',
+                containIntrinsicSize: shouldShowResizePlaceholder ? '1200px' : undefined,
+                pointerEvents: shouldShowResizePlaceholder ? 'none' : undefined,
+              }}
+            >
+              <CodeView
+                items={panelState.items}
+                options={{
+                  theme: 'pierre-dark',
+                  diffStyle: 'split',
+                  disableBackground: true,
+                  lineDiffType: 'word',
+                }}
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '12px',
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </section>

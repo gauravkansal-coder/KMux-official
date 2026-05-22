@@ -7,6 +7,7 @@ import type {
 } from '../shared/diff-types';
 
 const MAX_DIFF_BYTES = 20 * 1024 * 1024;
+const EMPTY_TREE_REVISION = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 export interface GitDiffRuntime {
   statSync: typeof fs.statSync;
@@ -37,32 +38,19 @@ const isLocalAbsolutePath = (cwd: string): boolean => {
   return path.isAbsolute(cwd);
 };
 
-export const getGitWorkingTreeDiff = async (
-  request: GitWorkingTreeDiffRequest,
-  runtime: GitDiffRuntime = defaultRuntime,
+const isBadHeadRevision = (message: string): boolean => {
+  return /\bbad revision\b/.test(message) && /\bHEAD\b/.test(message);
+};
+
+const runGitDiff = async (
+  cwd: string,
+  revision: string,
+  runtime: GitDiffRuntime,
 ): Promise<GitWorkingTreeDiffResponse> => {
-  const cwd = request.cwd.trim();
-
-  if (!isLocalAbsolutePath(cwd)) {
-    return {
-      ok: false,
-      cwd,
-      message: 'Diffs can only be opened for local absolute folders.',
-    };
-  }
-
-  if (!hasExactGitDirectory(cwd, runtime)) {
-    return {
-      ok: false,
-      cwd,
-      message: 'This folder does not contain a .git directory.',
-    };
-  }
-
   return new Promise<GitWorkingTreeDiffResponse>((resolve) => {
     const child = runtime.spawn(
       'git',
-      ['-C', cwd, 'diff', '--no-ext-diff', '--no-color', 'HEAD', '--'],
+      ['-C', cwd, 'diff', '--no-ext-diff', '--no-color', revision, '--'],
       {
         shell: false,
         windowsHide: true,
@@ -130,4 +118,34 @@ export const getGitWorkingTreeDiff = async (
       });
     });
   });
+};
+
+export const getGitWorkingTreeDiff = async (
+  request: GitWorkingTreeDiffRequest,
+  runtime: GitDiffRuntime = defaultRuntime,
+): Promise<GitWorkingTreeDiffResponse> => {
+  const cwd = request.cwd.trim();
+
+  if (!isLocalAbsolutePath(cwd)) {
+    return {
+      ok: false,
+      cwd,
+      message: 'Diffs can only be opened for local absolute folders.',
+    };
+  }
+
+  if (!hasExactGitDirectory(cwd, runtime)) {
+    return {
+      ok: false,
+      cwd,
+      message: 'This folder does not contain a .git directory.',
+    };
+  }
+
+  const headDiff = await runGitDiff(cwd, 'HEAD', runtime);
+  if (!headDiff.ok && isBadHeadRevision(headDiff.message)) {
+    return runGitDiff(cwd, EMPTY_TREE_REVISION, runtime);
+  }
+
+  return headDiff;
 };

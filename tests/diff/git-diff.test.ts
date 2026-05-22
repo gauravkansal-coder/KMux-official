@@ -13,6 +13,12 @@ interface RuntimeOptions {
   stderr?: string;
   code?: number;
   error?: Error;
+  results?: Array<{
+    stdout?: string;
+    stderr?: string;
+    code?: number;
+    error?: Error;
+  }>;
 }
 
 const createRuntime = (options: RuntimeOptions = {}) => {
@@ -23,6 +29,7 @@ const createRuntime = (options: RuntimeOptions = {}) => {
     })) as GitDiffRuntime['statSync'],
     spawn: ((command: string, args: string[]) => {
       calls.push({ command, args });
+      const result = options.results?.[calls.length - 1] ?? options;
       const child = new EventEmitter() as EventEmitter & {
         stdout: EventEmitter;
         stderr: EventEmitter;
@@ -35,17 +42,17 @@ const createRuntime = (options: RuntimeOptions = {}) => {
       };
 
       queueMicrotask(() => {
-        if (options.error) {
-          child.emit('error', options.error);
+        if (result.error) {
+          child.emit('error', result.error);
           return;
         }
-        if (options.stdout) {
-          child.stdout.emit('data', Buffer.from(options.stdout));
+        if (result.stdout) {
+          child.stdout.emit('data', Buffer.from(result.stdout));
         }
-        if (options.stderr) {
-          child.stderr.emit('data', Buffer.from(options.stderr));
+        if (result.stderr) {
+          child.stderr.emit('data', Buffer.from(result.stderr));
         }
-        child.emit('close', options.code ?? 0);
+        child.emit('close', result.code ?? 0);
       });
 
       return child;
@@ -88,13 +95,49 @@ test('git diff runs against HEAD in the requested cwd', async () => {
 });
 
 test('git diff returns structured command failures', async () => {
-  const { runtime } = createRuntime({ code: 1, stderr: 'fatal: bad revision HEAD\n' });
+  const { runtime } = createRuntime({ code: 128, stderr: 'fatal: not a git repository\n' });
 
   const response = await getGitWorkingTreeDiff({ cwd: path.resolve('/tmp/project') }, runtime);
 
   assert.deepEqual(response, {
     ok: false,
     cwd: path.resolve('/tmp/project'),
-    message: 'fatal: bad revision HEAD',
+    message: 'fatal: not a git repository',
   });
+});
+
+test('git diff falls back to the empty tree when HEAD does not exist yet', async () => {
+  const cwd = path.resolve('/tmp/project');
+  const { runtime, calls } = createRuntime({
+    results: [
+      { code: 128, stderr: "fatal: bad revision 'HEAD'\n" },
+      { stdout: 'diff --git a/a b/a\nnew file mode 100644\n' },
+    ],
+  });
+
+  const response = await getGitWorkingTreeDiff({ cwd }, runtime);
+
+  assert.deepEqual(response, {
+    ok: true,
+    cwd,
+    patch: 'diff --git a/a b/a\nnew file mode 100644\n',
+  });
+  assert.deepEqual(calls, [
+    {
+      command: 'git',
+      args: ['-C', cwd, 'diff', '--no-ext-diff', '--no-color', 'HEAD', '--'],
+    },
+    {
+      command: 'git',
+      args: [
+        '-C',
+        cwd,
+        'diff',
+        '--no-ext-diff',
+        '--no-color',
+        '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
+        '--',
+      ],
+    },
+  ]);
 });
