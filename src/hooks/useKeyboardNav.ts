@@ -20,6 +20,7 @@ export const useKeyboardNav = () => {
     cycleThemes,
     toggleSearch,
     toggleControls,
+    isControlsOpen,
   } = useCanvasStore();
   const { isOpen: isPickerOpen, openPicker } = useTerminalPicker();
 
@@ -29,6 +30,12 @@ export const useKeyboardNav = () => {
 
       const matched = findKeybind(e);
       if (!matched) return;
+
+      if (isControlsOpen && matched.action !== 'toggleControls') {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
 
       let handled = true;
       const action: KeyAction = matched.action;
@@ -144,6 +151,7 @@ export const useKeyboardNav = () => {
     cycleThemes,
     toggleSearch,
     toggleControls,
+    isControlsOpen,
     isPickerOpen,
     openPicker,
   ]);
