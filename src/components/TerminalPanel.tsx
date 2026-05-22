@@ -33,7 +33,8 @@ export const TerminalPanel: React.FC<Props> = ({ terminal, isActive }) => {
         flexShrink: 0,
         margin: isTerminalFullscreen && isActive ? "0" : `0 ${GAPS_VW / 2}vw`,
         background: theme.panelBg,
-        transition: "all 150ms cubic-bezier(0.22, 1, 0.36, 1)",
+        transition:
+          "width 150ms cubic-bezier(0.22, 1, 0.36, 1), height 150ms cubic-bezier(0.22, 1, 0.36, 1), margin 150ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms cubic-bezier(0.22, 1, 0.36, 1)",
         opacity: displayOpacity,
         display: "flex",
         flexDirection: "column",

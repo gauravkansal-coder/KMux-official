@@ -27,7 +27,10 @@ export const WorkspaceRow: React.FC<Props> = ({
    * Calculates the perspective camera's offset based on terminal density and focus.
    */
   useEffect(() => {
-    if (workspace.terminals.length === 0) return;
+    if (workspace.terminals.length === 0) {
+      setViewOffset(0);
+      return;
+    }
 
     const { activeTerminalIndex, terminals } = workspace;
 
@@ -41,45 +44,41 @@ export const WorkspaceRow: React.FC<Props> = ({
     );
     const activeRight = activeLeft + activeWidth + GAPS_VW;
 
-    let targetOffset = viewOffset;
+    setViewOffset((currentOffset) => {
+      let targetOffset = currentOffset;
+      const maxOffset = Math.max(0, totalRowWidth - SCREEN_WIDTH_VW);
 
-    // Single-Terminal Centering (Focal Focus mode)
-    if (terminals.length === 1) {
-      const solitaryWidth = getWidthVW(terminals[0].widthFraction);
-      targetOffset = (solitaryWidth + GAPS_VW - SCREEN_WIDTH_VW) / 2;
-    }
-    // Multi-Terminal Panning (Magnetic Strip mode)
-    else {
-      const isLastTerminal = activeTerminalIndex === terminals.length - 1;
-
-      // Right-edge magnetism for context reveal
-      // Clamp to activeLeft so a wide terminal is never scrolled off its own left edge
-      if (isLastTerminal) {
-        targetOffset = Math.min(
-          activeRight - SCREEN_WIDTH_VW + CAMERA_PADDING,
-          activeLeft,
-        );
-      }
-      // Lazy tracking for internal strip movement
-      else if (activeLeft < viewOffset + CAMERA_PADDING) {
-        targetOffset = activeLeft - CAMERA_PADDING;
-      } else if (activeRight > viewOffset + SCREEN_WIDTH_VW - CAMERA_PADDING) {
-        targetOffset = activeRight - SCREEN_WIDTH_VW + CAMERA_PADDING;
-      }
-
-      if (totalRowWidth <= SCREEN_WIDTH_VW && !isLastTerminal) {
+      // Single-Terminal Centering (Focal Focus mode)
+      if (terminals.length === 1 || totalRowWidth <= SCREEN_WIDTH_VW) {
         targetOffset = 0;
-      } else if (totalRowWidth > SCREEN_WIDTH_VW) {
-        // Prevent viewport overflow of empty leading space
-        targetOffset = Math.max(0, targetOffset);
       }
-    }
+      // Multi-Terminal Panning (Magnetic Strip mode)
+      else {
+        const isLastTerminal = activeTerminalIndex === terminals.length - 1;
 
-    // Threshold-based state update to minimize jitter
-    if (Math.abs(targetOffset - viewOffset) > 0.01) {
-      setViewOffset(targetOffset);
-    }
-  }, [workspace.activeTerminalIndex, workspace.terminals, viewOffset]);
+        // Right-edge magnetism for context reveal
+        // Clamp to activeLeft so a wide terminal is never scrolled off its own left edge
+        if (isLastTerminal) {
+          targetOffset = Math.min(
+            activeRight - SCREEN_WIDTH_VW + CAMERA_PADDING,
+            activeLeft,
+          );
+        }
+        // Lazy tracking for internal strip movement
+        else if (activeLeft < currentOffset + CAMERA_PADDING) {
+          targetOffset = activeLeft - CAMERA_PADDING;
+        } else if (activeRight > currentOffset + SCREEN_WIDTH_VW - CAMERA_PADDING) {
+          targetOffset = activeRight - SCREEN_WIDTH_VW + CAMERA_PADDING;
+        }
+
+        // Prevent viewport overflow of empty leading or trailing space.
+        targetOffset = Math.min(maxOffset, Math.max(0, targetOffset));
+      }
+
+      // Threshold-based state update to minimize jitter
+      return Math.abs(targetOffset - currentOffset) > 0.01 ? targetOffset : currentOffset;
+    });
+  }, [workspace.activeTerminalIndex, workspace.terminals, totalRowWidth]);
 
   const activeTerminal = workspace.terminals[workspace.activeTerminalIndex];
   const visibleTerminals =
