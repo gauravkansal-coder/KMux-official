@@ -60,6 +60,8 @@ export interface CanvasState {
   activeWorkspaceIndex: number;
   isOverview: boolean;
   isSearchOpen: boolean;
+  isControlsOpen: boolean;
+  isExplorerOpen: boolean;
   isTerminalFullscreen: boolean;
   terminalFontSize: number;
   terminalFontSizes: Record<string, number>;
@@ -70,6 +72,8 @@ export interface CanvasState {
   setTheme: (themeName: string) => void;
   cycleThemes: () => void;
   toggleSearch: () => void;
+  toggleControls: () => void;
+  toggleExplorer: () => void;
   focusWorkspaceItem: (itemId: string) => void;
   jumpToGlobalTerminal: (terminalId: string) => void;
   jumpToWorkspace: (index: number) => void;

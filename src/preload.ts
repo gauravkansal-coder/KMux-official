@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { DIFF_IPC_CHANNELS } from './diff/shared/diff-ipc';
 import type { DiffApi } from './diff/shared/diff-types';
+import { EXPLORER_IPC_CHANNELS } from './explorer/shared/explorer-ipc';
+import type { ExplorerApi } from './explorer/shared/explorer-types';
 import { TERMINAL_IPC_CHANNELS } from './terminal/shared/terminal-ipc';
 import type {
   TerminalApi,
@@ -61,5 +63,12 @@ const diffApi: DiffApi = {
   },
 };
 
+const explorerApi: ExplorerApi = {
+  listDirectory: async (request) => {
+    return ipcRenderer.invoke(EXPLORER_IPC_CHANNELS.listDirectory, request);
+  },
+};
+
 contextBridge.exposeInMainWorld('terminalApi', terminalApi);
 contextBridge.exposeInMainWorld('diffApi', diffApi);
+contextBridge.exposeInMainWorld('explorerApi', explorerApi);

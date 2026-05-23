@@ -3,6 +3,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { mainWindowConfig, shouldOpenDevTools } from './config/window';
 import { registerDiffIpc } from './diff/main/registerDiffIpc';
+import { registerExplorerIpc } from './explorer/main/registerExplorerIpc';
 import { TerminalManager } from './terminal/main/TerminalManager';
 import { registerTerminalIpc } from './terminal/main/registerTerminalIpc';
 
@@ -13,6 +14,7 @@ if (started) {
 
 const terminalManager = new TerminalManager();
 const unregisterDiffIpc = registerDiffIpc({ ipcMain });
+const unregisterExplorerIpc = registerExplorerIpc({ ipcMain });
 const unregisterTerminalIpc = registerTerminalIpc({
   ipcMain,
   getWindows: () => BrowserWindow.getAllWindows(),
@@ -67,6 +69,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   unregisterDiffIpc();
+  unregisterExplorerIpc();
   unregisterTerminalIpc();
   terminalManager.killAll();
 });

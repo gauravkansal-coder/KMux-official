@@ -24,7 +24,7 @@
     "import/no-unresolved": [
       "error",
       {
-        "ignore": ["^@pierre/diffs$", "^@pierre/diffs/react$"]
+        "ignore": ["^@pierre/diffs$", "^@pierre/diffs/react$", "^@pierre/trees/react$"]
       }
     ]
   }

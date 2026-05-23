@@ -204,6 +204,8 @@ export const useCanvasStore = create<CanvasState>()(
       activeWorkspaceIndex: 0,
       isOverview: false,
       isSearchOpen: false,
+      isControlsOpen: false,
+      isExplorerOpen: false,
       isTerminalFullscreen: false,
       terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
       terminalFontSizes: {},
@@ -218,6 +220,14 @@ export const useCanvasStore = create<CanvasState>()(
 
       toggleSearch: () => {
         set((state) => ({ isSearchOpen: !state.isSearchOpen }));
+      },
+
+      toggleControls: () => {
+        set((state) => ({ isControlsOpen: !state.isControlsOpen }));
+      },
+
+      toggleExplorer: () => {
+        set((state) => ({ isExplorerOpen: !state.isExplorerOpen }));
       },
 
       focusWorkspaceItem: (itemId: string) => {

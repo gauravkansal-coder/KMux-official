@@ -21,6 +21,7 @@ export const useKeyboardNav = () => {
     toggleTerminalFullscreen,
     cycleThemes,
     toggleSearch,
+    toggleExplorer,
     workspaces,
     activeWorkspaceIndex,
   } = useCanvasStore();
@@ -96,6 +97,9 @@ export const useKeyboardNav = () => {
           }
         } else if (e.altKey && key === 'b') {
           toggleTerminalFullscreen();
+          handled = true;
+        } else if (e.altKey && key === 'e') {
+          toggleExplorer();
           handled = true;
         } else if (e.altKey && /^[1-9]$/.test(key)) {
           jumpToWorkspace(parseInt(key, 10) - 1);
@@ -194,6 +198,7 @@ export const useKeyboardNav = () => {
     toggleTerminalFullscreen,
     cycleThemes,
     toggleSearch,
+    toggleExplorer,
     workspaces,
     activeWorkspaceIndex,
     sessions,
