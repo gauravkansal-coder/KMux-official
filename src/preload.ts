@@ -27,10 +27,10 @@ const terminalApi: TerminalApi = {
     return ipcRenderer.invoke(TERMINAL_IPC_CHANNELS.create, request);
   },
   writeTerminal: async (request) => {
-    await ipcRenderer.invoke(TERMINAL_IPC_CHANNELS.write, request);
+    ipcRenderer.send(TERMINAL_IPC_CHANNELS.write, request);
   },
   resizeTerminal: async (request) => {
-    await ipcRenderer.invoke(TERMINAL_IPC_CHANNELS.resize, request);
+    ipcRenderer.send(TERMINAL_IPC_CHANNELS.resize, request);
   },
   killTerminal: async (request) => {
     await ipcRenderer.invoke(TERMINAL_IPC_CHANNELS.kill, request);

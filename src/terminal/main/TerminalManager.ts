@@ -30,6 +30,7 @@ const TERMINAL_EVENT_NAMES = {
 const MIN_DIMENSION = 2;
 const LINUX_CWD_POLL_INTERVAL_MS = 1500;
 const DARWIN_CWD_POLL_INTERVAL_MS = 15000;
+const FOREGROUND_PROCESS_REFRESH_INTERVAL_MS = 500;
 
 interface TerminalSessionRecord {
   pty: IPty;
@@ -98,6 +99,7 @@ const canApplyCwdUpdate = (
 export class TerminalManager {
   private readonly sessions = new Map<string, TerminalSessionRecord>();
   private readonly events = new EventEmitter();
+  private readonly foregroundRefreshTimers = new Map<string, NodeJS.Timeout>();
 
   public createTerminal(request: CreateTerminalRequest): TerminalSessionSnapshot {
     const existing = this.sessions.get(request.terminalId);
@@ -161,7 +163,7 @@ export class TerminalManager {
     this.startCwdProbe(request.terminalId);
 
     ptyProcess.onData((data) => {
-      this.refreshForegroundProcess(request.terminalId);
+      this.scheduleForegroundProcessRefresh(request.terminalId);
       this.refreshCwdFromOutput(request.terminalId, data);
       this.events.emit(TERMINAL_EVENT_NAMES.output, {
         terminalId: request.terminalId,
@@ -174,6 +176,7 @@ export class TerminalManager {
       if (exitedSession?.cwdProbeTimer) {
         clearInterval(exitedSession.cwdProbeTimer);
       }
+      this.clearForegroundProcessRefresh(request.terminalId);
       this.sessions.delete(request.terminalId);
 
       this.events.emit(TERMINAL_EVENT_NAMES.exit, {
@@ -225,6 +228,7 @@ export class TerminalManager {
     if (!session) {
       return;
     }
+    this.clearForegroundProcessRefresh(request.terminalId);
     session.pty.kill();
   }
 
@@ -236,6 +240,10 @@ export class TerminalManager {
       session.pty.kill();
     }
     this.sessions.clear();
+    for (const timer of this.foregroundRefreshTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.foregroundRefreshTimers.clear();
   }
 
   public listTerminals(): TerminalSessionSnapshot[] {
@@ -292,6 +300,26 @@ export class TerminalManager {
       foregroundProcess,
     };
     this.emitState(session.snapshot);
+  }
+
+  private scheduleForegroundProcessRefresh(terminalId: string): void {
+    if (this.foregroundRefreshTimers.has(terminalId)) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      this.foregroundRefreshTimers.delete(terminalId);
+      this.refreshForegroundProcess(terminalId);
+    }, FOREGROUND_PROCESS_REFRESH_INTERVAL_MS);
+    this.foregroundRefreshTimers.set(terminalId, timer);
+  }
+
+  private clearForegroundProcessRefresh(terminalId: string): void {
+    const timer = this.foregroundRefreshTimers.get(terminalId);
+    if (timer) {
+      clearTimeout(timer);
+      this.foregroundRefreshTimers.delete(terminalId);
+    }
   }
 
   private startCwdProbe(terminalId: string): void {
