@@ -47,8 +47,8 @@ export const DEFAULT_TERMINAL_FONT_SIZE = 12;
 export const MIN_TERMINAL_FONT_SIZE = 9;
 export const MAX_TERMINAL_FONT_SIZE = 24;
 export const TERMINAL_FONT_SIZE_STEP = 1;
-export const DEFAULT_DIFF_FONT_SIZE = 12;
-export const MIN_DIFF_FONT_SIZE = 9;
+export const DEFAULT_DIFF_FONT_SIZE = 13;
+export const MIN_DIFF_FONT_SIZE = 8;
 export const MAX_DIFF_FONT_SIZE = 24;
 export const DIFF_FONT_SIZE_STEP = 1;
 

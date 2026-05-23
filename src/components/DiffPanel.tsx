@@ -148,13 +148,17 @@ export const DiffPanel: React.FC<Props> = ({ panel, isActive }) => {
             <div
               style={{
                 width: "100%",
-                fontFamily: "JetBrains Mono, monospace",
-                fontSize: `${diffFontSize}px`,
-                lineHeight: `${diffLineHeight}px`,
               }}
             >
               <CodeView
                 items={panelState.items}
+                style={
+                  {
+                    "--diffs-font-family": "JetBrains Mono, monospace",
+                    "--diffs-font-size": `${diffFontSize}px`,
+                    "--diffs-line-height": `${diffLineHeight}px`,
+                  } as React.CSSProperties
+                }
                 options={{
                   theme: "pierre-dark",
                   diffStyle: diffViewMode === "split" ? "split" : "unified",
