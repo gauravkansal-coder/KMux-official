@@ -7,13 +7,27 @@ import {
 } from "../terminal/shared/cwd-format";
 import { useTerminalRuntime } from "../terminal/renderer/context/useTerminalRuntime";
 
+/** PTY terminal identifiers that should never be displayed as process labels. */
+const PTY_TERMINAL_NAMES = new Set([
+  'xterm-256color',
+  'xterm-color',
+  'xterm',
+  'screen-256color',
+  'screen',
+  'Windows Shell',
+]);
+
 const getTerminalLabel = (
   session: ReturnType<typeof useTerminalRuntime>["sessions"][string] | undefined,
   fallback: string,
 ): string => {
   const foregroundProcess = session?.foregroundProcess?.trim();
   const shell = session?.shell?.trim();
-  if (foregroundProcess && getPathBasename(foregroundProcess) !== shell) {
+  if (
+    foregroundProcess &&
+    !PTY_TERMINAL_NAMES.has(foregroundProcess) &&
+    getPathBasename(foregroundProcess) !== shell
+  ) {
     return foregroundProcess;
   }
 

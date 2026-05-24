@@ -4,6 +4,7 @@ import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
 import { Osc7CwdParser, toTerminalCurrentCwd } from './cwd/osc7';
 import { probeProcessCwd } from './cwd/probe';
+import { probeWindowsForegroundProcess } from './cwd/win-foreground';
 import type { TerminalProfile } from '../shared/terminal-profiles';
 import type {
   CreateTerminalRequest,
@@ -51,7 +52,16 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-const getForegroundProcess = (ptyProcess: IPty): string | undefined => {
+const getForegroundProcess = (
+  ptyProcess: IPty,
+  pid: number | null,
+): string | undefined => {
+  if (process.platform === 'win32') {
+    // On Windows, ptyProcess.process returns the PTY name (e.g. 'xterm-256color')
+    // instead of the actual foreground process. Use the process tree probe instead.
+    return probeWindowsForegroundProcess(pid);
+  }
+
   const processName = ptyProcess.process?.trim();
   return processName && processName.length > 0 ? processName : undefined;
 };
@@ -140,7 +150,7 @@ export class TerminalManager {
       pid: ptyProcess.pid,
       profileId: request.profileId,
       shell: shell.label,
-      foregroundProcess: getForegroundProcess(ptyProcess),
+      foregroundProcess: getForegroundProcess(ptyProcess, ptyProcess.pid),
       cwd,
       currentCwd: {
         path: cwd,
@@ -290,7 +300,7 @@ export class TerminalManager {
       return;
     }
 
-    const foregroundProcess = getForegroundProcess(session.pty);
+    const foregroundProcess = getForegroundProcess(session.pty, session.pty.pid);
     if (foregroundProcess === session.snapshot.foregroundProcess) {
       return;
     }
