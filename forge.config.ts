@@ -11,6 +11,19 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    ignore: (file) => {
+      if (!file) {
+        return false;
+      }
+
+      return !(
+        file.startsWith("/.vite") ||
+        file === "/package.json" ||
+        file === "/node_modules" ||
+        file.startsWith("/node_modules/node-pty") ||
+        file.startsWith("/node_modules/node-addon-api")
+      );
+    },
   },
   rebuildConfig: {
     onlyModules: ["node-pty"],

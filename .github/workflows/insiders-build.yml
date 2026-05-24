@@ -1,0 +1,109 @@
+name: Insiders Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            platform: win32
+            artifact-name: kmux-windows-insiders
+          - name: macOS
+            os: macos-15-intel
+            platform: darwin
+            artifact-name: kmux-macos-insiders
+          - name: Linux
+            os: ubuntu-latest
+            platform: linux
+            artifact-name: kmux-linux-insiders
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set insiders version
+        shell: bash
+        run: |
+          BUILD_VERSION="1.1.0-insiders.${GITHUB_RUN_NUMBER}"
+          npm pkg set version="$BUILD_VERSION" --json=false
+          echo "BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build Windows installer
+        if: matrix.platform == 'win32'
+        run: pnpm exec electron-forge make --platform win32 --arch x64 --targets @electron-forge/maker-squirrel
+
+      - name: Build macOS zip
+        if: matrix.platform == 'darwin'
+        run: pnpm exec electron-forge make --platform darwin --arch x64 --targets @electron-forge/maker-zip
+
+      - name: Package Linux app
+        if: matrix.platform == 'linux'
+        run: pnpm exec electron-forge package --platform linux --arch x64
+
+      - name: Create Linux tarball
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          package_dir="out/kmux-linux-x64"
+          archive_name="KMux-linux-x64-${BUILD_VERSION}.tar.gz"
+          test -d "$package_dir"
+          tar -czf "$archive_name" -C out "$(basename "$package_dir")"
+          mkdir -p out/make/linux-generic/x64
+          mv "$archive_name" out/make/linux-generic/x64/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: out/make/**
+          if-no-files-found: error
+
+  release:
+    name: Publish insiders release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Set release version
+        run: |
+          BUILD_VERSION="1.1.0-insiders.${GITHUB_RUN_NUMBER}"
+          echo "BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=insiders-v$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: KMux Insiders ${{ env.BUILD_VERSION }}
+          prerelease: true
+          generate_release_notes: true
+          files: release-assets/**

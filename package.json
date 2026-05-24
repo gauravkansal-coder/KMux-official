@@ -1,7 +1,7 @@
 {
   "name": "kmux",
   "productName": "kmux",
-  "version": "1.0.0",
+  "version": "1.1.0-insiders.0",
   "description": "Keyboard-driven Electron terminal workspace manager",
   "main": ".vite/build/main.js",
   "private": true,
