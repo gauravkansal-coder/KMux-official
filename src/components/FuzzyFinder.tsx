@@ -6,6 +6,7 @@ import {
   getTerminalSearchText,
 } from "../terminal/shared/cwd-format";
 import { useTerminalRuntime } from "../terminal/renderer/context/useTerminalRuntime";
+import { fuzzyIncludes } from "../lib/fuzzySearch";
 
 /** PTY terminal identifiers that should never be displayed as process labels. */
 const PTY_TERMINAL_NAMES = new Set([
@@ -61,8 +62,9 @@ export const FuzzyFinder: React.FC = () => {
   const filtered = allTerminals.filter((t) => {
     const session = sessions[t.id];
     const label = getTerminalLabel(session, t.title);
-    return getTerminalSearchText(session, t.title, t.workspaceName, label).includes(
-      query.toLowerCase(),
+    return fuzzyIncludes(
+      getTerminalSearchText(session, t.title, t.workspaceName, label),
+      query,
     );
   });
 
