@@ -6,16 +6,17 @@ import {
   getTerminalSearchText,
 } from "../terminal/shared/cwd-format";
 import { useTerminalRuntime } from "../terminal/renderer/context/useTerminalRuntime";
-import { fuzzyIncludes } from "../lib/fuzzySearch";
+import { fuzzyIncludesNormalized, normalizeSearchText } from "../lib/fuzzySearch";
 
-/** PTY terminal identifiers that should never be displayed as process labels. */
+/** PTY terminal identifiers that should never be displayed as process labels.
+ *  Stored in lowercase for case-insensitive comparison. */
 const PTY_TERMINAL_NAMES = new Set([
   'xterm-256color',
   'xterm-color',
   'xterm',
   'screen-256color',
   'screen',
-  'Windows Shell',
+  'windows shell',
 ]);
 
 const getTerminalLabel = (
@@ -26,7 +27,7 @@ const getTerminalLabel = (
   const shell = session?.shell?.trim();
   if (
     foregroundProcess &&
-    !PTY_TERMINAL_NAMES.has(foregroundProcess) &&
+    !PTY_TERMINAL_NAMES.has(foregroundProcess.toLowerCase()) &&
     getPathBasename(foregroundProcess) !== shell
   ) {
     return foregroundProcess;
@@ -59,12 +60,14 @@ export const FuzzyFinder: React.FC = () => {
       })),
   );
 
+  // Pre-normalize query once for the entire filter pass
+  const normalizedQuery = normalizeSearchText(query);
   const filtered = allTerminals.filter((t) => {
     const session = sessions[t.id];
     const label = getTerminalLabel(session, t.title);
-    return fuzzyIncludes(
-      getTerminalSearchText(session, t.title, t.workspaceName, label),
-      query,
+    return fuzzyIncludesNormalized(
+      normalizeSearchText(getTerminalSearchText(session, t.title, t.workspaceName, label)),
+      normalizedQuery,
     );
   });
 

@@ -4,7 +4,7 @@ import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
 import { Osc7CwdParser, toTerminalCurrentCwd } from './cwd/osc7';
 import { probeProcessCwd } from './cwd/probe';
-import { probeWindowsForegroundProcess } from './cwd/win-foreground';
+import { probeWindowsForegroundProcess, probeWindowsForegroundProcessAsync } from './cwd/win-foreground';
 import type { TerminalProfile } from '../shared/terminal-profiles';
 import type {
   CreateTerminalRequest,
@@ -60,6 +60,19 @@ const getForegroundProcess = (
     // On Windows, ptyProcess.process returns the PTY name (e.g. 'xterm-256color')
     // instead of the actual foreground process. Use the process tree probe instead.
     return probeWindowsForegroundProcess(pid);
+  }
+
+  const processName = ptyProcess.process?.trim();
+  return processName && processName.length > 0 ? processName : undefined;
+};
+
+/** Async variant for scheduled refreshes — avoids blocking the event loop on Windows. */
+const getForegroundProcessAsync = async (
+  ptyProcess: IPty,
+  pid: number | null,
+): Promise<string | undefined> => {
+  if (process.platform === 'win32') {
+    return probeWindowsForegroundProcessAsync(pid);
   }
 
   const processName = ptyProcess.process?.trim();
@@ -294,22 +307,24 @@ export class TerminalManager {
     } satisfies TerminalStateEvent);
   }
 
-  private refreshForegroundProcess(terminalId: string): void {
+  private async refreshForegroundProcess(terminalId: string): Promise<void> {
     const session = this.sessions.get(terminalId);
     if (!session) {
       return;
     }
 
-    const foregroundProcess = getForegroundProcess(session.pty, session.pty.pid);
-    if (foregroundProcess === session.snapshot.foregroundProcess) {
+    const foregroundProcess = await getForegroundProcessAsync(session.pty, session.pty.pid);
+    // Re-check session after await — it may have been killed while we waited
+    const current = this.sessions.get(terminalId);
+    if (!current || foregroundProcess === current.snapshot.foregroundProcess) {
       return;
     }
 
-    session.snapshot = {
-      ...session.snapshot,
+    current.snapshot = {
+      ...current.snapshot,
       foregroundProcess,
     };
-    this.emitState(session.snapshot);
+    this.emitState(current.snapshot);
   }
 
   private scheduleForegroundProcessRefresh(terminalId: string): void {

@@ -1,11 +1,16 @@
-const normalizeSearchText = (value: string): string => {
+export const normalizeSearchText = (value: string): string => {
   return value.trim().toLowerCase();
 };
 
-export const fuzzyIncludes = (text: string, query: string): boolean => {
-  const normalizedText = normalizeSearchText(text);
-  const normalizedQuery = normalizeSearchText(query);
-
+/**
+ * Fuzzy-match with pre-normalized text and query.
+ * Use this when filtering a list with the same query to avoid
+ * redundant normalization on every call.
+ */
+export const fuzzyIncludesNormalized = (
+  normalizedText: string,
+  normalizedQuery: string,
+): boolean => {
   if (normalizedQuery.length === 0) {
     return true;
   }
@@ -21,4 +26,12 @@ export const fuzzyIncludes = (text: string, query: string): boolean => {
   }
 
   return false;
+};
+
+/** Convenience wrapper that normalizes both inputs. */
+export const fuzzyIncludes = (text: string, query: string): boolean => {
+  return fuzzyIncludesNormalized(
+    normalizeSearchText(text),
+    normalizeSearchText(query),
+  );
 };

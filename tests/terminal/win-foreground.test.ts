@@ -2,16 +2,19 @@ import assert from 'node:assert/strict';
 import test, { beforeEach } from 'node:test';
 import {
   probeWindowsForegroundProcess,
+  probeWindowsForegroundProcessAsync,
   _resetCache,
   type WinForegroundProbeRuntime,
 } from '../../src/terminal/main/cwd/win-foreground.ts';
 
 const createFakeRuntime = (processTree: string): WinForegroundProbeRuntime => ({
   runCommand: () => ({ status: 0, stdout: processTree }),
+  runCommandAsync: () => Promise.resolve({ status: 0, stdout: processTree }),
 });
 
 const createFailingRuntime = (): WinForegroundProbeRuntime => ({
   runCommand: () => ({ status: 1, stdout: '' }),
+  runCommandAsync: () => Promise.resolve({ status: 1, stdout: '' }),
 });
 
 // Clear the cache before each test to avoid cross-test pollution
@@ -46,12 +49,27 @@ test('probeWindowsForegroundProcess returns direct child when no deeper children
   assert.equal(result, 'vim');
 });
 
-test('probeWindowsForegroundProcess skips conhost.exe', () => {
+test('probeWindowsForegroundProcess skips conhost.exe as sibling', () => {
   const runtime = createFakeRuntime(
     [
       '100,1,powershell.exe',
       '200,100,conhost.exe',
       '300,100,node.exe',
+    ].join('\n'),
+  );
+
+  const result = probeWindowsForegroundProcess(100, runtime);
+  assert.equal(result, 'node');
+});
+
+test('probeWindowsForegroundProcess traverses through intermediate conhost.exe', () => {
+  // conhost.exe is an intermediate node: shell → conhost → app
+  // The traversal should be transparent through the ignored process
+  const runtime = createFakeRuntime(
+    [
+      '100,1,powershell.exe',
+      '200,100,conhost.exe',
+      '300,200,node.exe',
     ].join('\n'),
   );
 
@@ -122,3 +140,23 @@ test('probeWindowsForegroundProcess handles circular references without infinite
   const result = probeWindowsForegroundProcess(100, runtime);
   assert.ok(result === 'process_a' || result === 'process_b');
 });
+
+test('probeWindowsForegroundProcessAsync returns the same result as sync version', async () => {
+  const runtime = createFakeRuntime(
+    [
+      '100,1,powershell.exe',
+      '200,100,node.exe',
+      '300,200,python.exe',
+    ].join('\n'),
+  );
+
+  const result = await probeWindowsForegroundProcessAsync(100, runtime);
+  assert.equal(result, 'python');
+});
+
+test('probeWindowsForegroundProcessAsync returns undefined for invalid PID', async () => {
+  const runtime = createFakeRuntime('');
+  assert.equal(await probeWindowsForegroundProcessAsync(null, runtime), undefined);
+  assert.equal(await probeWindowsForegroundProcessAsync(0, runtime), undefined);
+});
+
